@@ -1,25 +1,48 @@
 package app
 
 import (
-	"log"
-	"os"
-	"net/http"
+	"database/sql"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/htojiddinov77-png/femProject/internal/api"
+	"github.com/htojiddinov77-png/femProject/internal/store"
+	"github.com/htojiddinov77-png/femProject/migrations"
 )
 
 type Application struct {
-	Logger *log.Logger
+	Logger         *log.Logger
+	WorkoutHandler *api.WorkoutHandler
+	DB             *sql.DB
 }
 
-func NewApplication() (*Application, error){
+func NewApplication() (*Application, error) {
+	pgDB, err := store.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	err = store.MigrateFS(pgDB, migrations.FS, ".")
+	if err != nil {
+		panic(err)
+	}
+
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
+	// our stores will go here
+
+	// our handler will go here
+	workoutHandler := api.NewWorkoutHandler()
 	app := &Application{
-		Logger: logger,
+		Logger:         logger,
+		WorkoutHandler: workoutHandler,
+		DB:             pgDB,
 	}
-	return app,nil
+	return app, nil
 }
 
-func (a *Application) HealthCheck(w http.ResponseWriter, r*http.Request){
-	fmt.Fprintf(w , "Status is available\n")
+func (a *Application) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Status is available\n")
 }

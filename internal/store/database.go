@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 
-	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/jackc/pgx/v4/stdlib" // in go this is bridge between my code and postgres 
 	"github.com/pressly/goose/v3"
 )
 

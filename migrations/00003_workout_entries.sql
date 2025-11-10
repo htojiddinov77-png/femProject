@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS workout_entries (
     exercise_name VARCHAR(255) NOT NULL,
     sets INTEGER NOT NULL,
     reps INTEGER,
-    duration_seconds INTEGER,
+    duration_seconds INT,
     weight DECIMAL(5, 2),
     notes TEXT,
     order_index INTEGER NOT NULL,

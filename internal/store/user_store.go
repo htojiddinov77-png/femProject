@@ -2,8 +2,10 @@ package store
 
 import (
 	"database/sql"
-	_"golang.org/x/crypto/bcrypt"
+	"errors"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type password struct {
@@ -11,11 +13,36 @@ type password struct {
 	hash       []byte
 }
 
+func (p *password) Set(plaintTextPassword string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(plaintTextPassword), 12)
+	if err != nil {
+		return err
+	}
+
+	p.plaintText = &plaintTextPassword
+	p.hash = hash
+	return nil
+}
+
+func (p *password) Matches(plaintTextPassword string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintTextPassword))
+	if err != nil {
+		switch {
+		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+			return false, nil
+		default:
+			return false, err // internal server error
+		}
+	}
+	
+	return true, nil
+}
+
 type User struct {
 	ID           int       `json:"id"`
 	Username     string    `json:"username"`
 	Email        string    `json:"email"`
-	PasswordHash password    `json:"-"` // - ignores the value
+	PasswordHash password  `json:"-"` // - ignores the value
 	Bio          string    `json:"bio"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -43,14 +70,13 @@ func (s *PostgresUserStore) CreateUser(user *User) error {
 	VALUES($1, $2, $3, $4)
 	RETURNING id, created_at, updated_at`
 
-	err := s.db.QueryRow(query,user.Username, user.Email, user.PasswordHash, user.Bio).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+	err := s.db.QueryRow(query, user.Username, user.Email, string(user.PasswordHash.hash), user.Bio).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return err
 	}
 
-	return  nil
+	return nil
 }
-
 
 func (s *PostgresUserStore) GetUserByUsername(username string) (*User, error) {
 	user := &User{
@@ -90,7 +116,7 @@ func (s *PostgresUserStore) UpdateUser(user *User) error {
 
 	result, err := s.db.Exec(query, user.Username, user.Email, user.Bio, user.ID)
 	if err != nil {
-		return  err
+		return err
 	}
 
 	rowsAffected, err := result.RowsAffected()

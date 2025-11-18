@@ -1,25 +1,28 @@
 package routes
 
 import (
+	"github.com/go-chi/chi/v5"
 
-    "github.com/go-chi/chi/v5"
-   
-    "github.com/htojiddinov77-png/femProject/internal/app"
+	"github.com/htojiddinov77-png/femProject/internal/app"
 )
 
 func SetupRoutes(app *app.Application) *chi.Mux {
-    r := chi.NewRouter()
+	r := chi.NewRouter()
 
+	r.Group(func(r chi.Router) {
+		r.Use(app.Middleware.Authenticate)
 
-    r.Get("/health", app.HealthCheck)
-    r.Get("/workouts/{id}", app.WorkoutHandler.HandleGetWorkoutByID)
-    r.Post("/workouts", app.WorkoutHandler.HandleCreateWorkout)
+		r.Get("/workouts/{id}", app.Middleware.RequireUser(app.WorkoutHandler.HandleGetWorkoutByID))
+		r.Post("/workouts", app.Middleware.RequireUser(app.WorkoutHandler.HandleCreateWorkout))
 
-    r.Put("/workouts/{id}", app.WorkoutHandler.HandleUpdateWorkoutById)
-	r.Delete("/workouts/{id}", app.WorkoutHandler.HandleDeleteWorkoutById)
+		r.Put("/workouts/{id}", app.Middleware.RequireUser(app.WorkoutHandler.HandleUpdateWorkoutById))
+		r.Delete("/workouts/{id}", app.Middleware.RequireUser(app.WorkoutHandler.HandleDeleteWorkoutById))
 
-    r.Post("/users", app.UserHandler.HandleRegisterUser)
-    r.Post("/tokens/authentication", app.TokenHandler.HandleCreateToken)
-	
-    return r
+	})
+	r.Get("/health", app.HealthCheck)
+
+	r.Post("/users", app.UserHandler.HandleRegisterUser)
+	r.Post("/tokens/authentication", app.TokenHandler.HandleCreateToken)
+
+	return r
 }
